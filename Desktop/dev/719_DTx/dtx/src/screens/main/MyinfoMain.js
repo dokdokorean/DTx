@@ -16,7 +16,7 @@ const MyinfoMain = () => {
   const handleReRecord = () => {
     // Navigate to the re-record screen
     // Replace 'ReRecordScreen' with the actual name of your re-record screen
-    navigation.navigate('PersonalInfo');
+    navigation.navigate('PersonalInfoRe');
   };
 
   const handleLogout = () => {

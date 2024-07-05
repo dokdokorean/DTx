@@ -15,7 +15,7 @@ const CustomTabIcon = ({ source, focused }) => {
         source={source}
         style={[
           styles.icon,
-          { tintColor: focused ? '#FFC124' : '#BDBDBD' },
+          { tintColor: focused ? '#84A2BB' : '#BDBDBD' },
         ]}
         resizeMode="contain"
       />
@@ -29,7 +29,7 @@ const TabNavigation = () => {
     <Tab.Navigator
       initialRouteName="CalenderMain"
       screenOptions={{
-        tabBarActiveTintColor: '#FFC124',
+        tabBarActiveTintColor: '#84A2BB',
         tabBarInactiveTintColor: '#BDBDBD',
         tabBarStyle: [{ display: 'flex' }, null],
       }}
@@ -38,7 +38,7 @@ const TabNavigation = () => {
         name="ChatbotMain"
         component={ChatbotMain}
         options={{
-          tabBarLabel: '음주 챗봇',
+          tabBarLabel: '챗봇',
           tabBarIcon: ({ focused }) => (
             <CustomTabIcon
               source={require('../assets/tab1.png')}
@@ -52,7 +52,7 @@ const TabNavigation = () => {
         name="CalenderMain"
         component={CalenderMain}
         options={{
-          tabBarLabel: '음주 캘린더',
+          tabBarLabel: '캘린더',
           tabBarIcon: ({ focused }) => (
             <CustomTabIcon
               source={require('../assets/tab2.png')}
@@ -98,20 +98,20 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 25,
-    height: 25,
+    width: 22,
+    height: 22,
   },
   icon: {
     width: '100%',
     height: '100%',
   },
   dot: {
-    width: 6,
-    height: 6,
-    backgroundColor: '#FFC124',
+    width:25,
+    height: 3,
+    backgroundColor: '#84A2BB',
     borderRadius: 3,
     position: 'absolute',
-    top: -12,
+    top: -10,
   },
 });
 

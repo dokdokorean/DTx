@@ -1,27 +1,33 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   TouchableOpacity,
   StyleSheet,
   Text,
   View,
-  Image,
-  Pressable,
   Animated,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import PersonalInfoHeader from '../../components/PersonalInfoHeader';
 import { Picker } from '@react-native-picker/picker';
-import { AuthContext } from '../../App'; // Adjust the import path as needed
+import { Audio } from 'expo-av';
+import axios from 'axios';
+import { BASE_URL } from '../../service/api'; // Import BASE_URL from your service/api file
+import { AuthContext } from '../../service/AuthContext'; // Adjust the path as needed
+import GoBackGeneralHeader from '../../components/GoBackGeneralHeader'; // Adjust the import path as needed
 
 const PersonalInfoInput = () => {
   const navigation = useNavigation();
-  const { setIsInputIn } = useContext(AuthContext); // Get setIsInputIn from context
+  const { jwtToken } = useContext(AuthContext); // Get JWT token from context
+
   const [step, setStep] = useState(0);
   const [gender, setGender] = useState(null);
   const [birthYear, setBirthYear] = useState('1993');
   const [weight, setWeight] = useState('62');
-  const [drinkingGoal, setDrinkingGoal] = useState('6');
   const [height, setHeight] = useState('175');
+  const [drinkingGoal, setDrinkingGoal] = useState('0'); // 초기값을 '0'으로 설정
+  const [recording, setRecording] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [dotScales, setDotScales] = useState([new Animated.Value(1), new Animated.Value(1), new Animated.Value(1), new Animated.Value(1)]);
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -35,9 +41,12 @@ const PersonalInfoInput = () => {
   const handleNext = () => {
     if (step < steps.length - 1) {
       setStep(step + 1);
+      console.log(jwtToken); // Log the token to ensure it is correctly retrieved
+      console.log('Drinking Goal:', drinkingGoal); // Log the drinkingGoal value for debugging
+
     } else {
-      setIsInputIn(true);
-      navigation.navigate('TabNavigation') // Set isInputIn to true when the last step is completed
+      saveProfileData(); // Save profile data to backend
+      console.log('언제 되는거지 이거?')
     }
   };
 
@@ -49,9 +58,123 @@ const PersonalInfoInput = () => {
         duration: 300,
         useNativeDriver: false,
       }).start();
-    } else {
-      navigation.goBack();
     }
+  };
+
+  const saveProfileData = async () => {
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/profile/create`,
+        {
+          gender,
+          birthYear,
+          weight,
+          height,
+          drinkingGoal,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${jwtToken}`, // Attach JWT token
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        Alert.alert('Success', 'Profile data saved successfully.');
+        navigation.navigate('TabNavigation');
+      } else {
+        Alert.alert('Error', 'Http 프로토콜 오류입니다');
+      }
+    } catch (error) {
+      console.error('Error saving profile data:', error);
+      Alert.alert('Error', 'try 오류입니다');
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status === 'granted') {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        const { recording } = await Audio.Recording.createAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
+        setRecording(recording);
+        setIsRecording(true);
+        startDotAnimation();
+      } else {
+        console.error('Permission to access microphone is required.');
+      }
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (recording) {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      console.log('Recording finished and stored at', uri);
+      uploadRecording(uri);
+    }
+  };
+
+const uploadRecording = async (uri) => {
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const fileName = uri.split('/').pop();
+
+    const formData = new FormData();
+    formData.append('file', blob, fileName);
+
+    const uploadResponse = await fetch(`${BASE_URL}/chatbot/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${jwtToken}`,
+      },
+      body: formData,
+    });
+
+    if (uploadResponse.ok) {
+      const data = await uploadResponse.json();
+      console.log(data);
+      Alert.alert('Success', 'File uploaded successfully.');
+    } else {
+      const errorText = await uploadResponse.text();
+      throw new Error(`Upload failed: ${errorText}`);
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    Alert.alert('Error', `Upload failed: ${error.message}`);
+  }
+};
+
+  const startDotAnimation = () => {
+    dotScales.forEach((scale, index) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scale, {
+            toValue: 1.5,
+            duration: 300,
+            delay: index * 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
+  };
+
+  const stopDotAnimation = () => {
+    dotScales.forEach(scale => scale.stopAnimation());
   };
 
   const renderGenderSelection = () => (
@@ -101,8 +224,8 @@ const PersonalInfoInput = () => {
       style={styles.picker}
       onValueChange={(itemValue) => setDrinkingGoal(itemValue)}
     >
-      {Array.from({ length: 16 }, (_, i) => 0 + i).map(goal => (
-        <Picker.Item key={goal} label={`${goal} 병`} value={String(goal)} />
+      {Array.from({ length: 16 }, (_, i) => 0 + i).map(drinkingGoal => (
+        <Picker.Item key={drinkingGoal} label={`${drinkingGoal} 병`} value={String(drinkingGoal)} />
       ))}
     </Picker>
   );
@@ -119,19 +242,44 @@ const PersonalInfoInput = () => {
     </Picker>
   );
 
+  const renderVoiceRecording = () => (
+    <View style={styles.voiceContainer}>
+      <Text style={styles.voiceQuestion}>
+        Q: 최근에 먹었던 음식 중에 가장 기억에 남는 음식은 무엇이고 가장 기억에 남는 이유는 뭔가요?
+      </Text>
+      <View style={styles.micContainer}>
+        <TouchableOpacity onPress={startRecording} style={styles.micButton}>
+          <Text style={styles.micText}>녹음</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={stopRecording} style={styles.completeButton}>
+          <Text style={styles.completeText}>완료!</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={startRecording} style={styles.reRecordButton}>
+          <Text style={styles.reRecordText}>재녹음</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.dotsContainer}>
+        {dotScales.map((scale, index) => (
+          <Animated.View key={index} style={[styles.dot, { transform: [{ scale }] }]} />
+        ))}
+      </View>
+    </View>
+  );
+
   const steps = [
     { title: "본인에 대해 알려주시겠어요?", component: renderGenderSelection },
     { title: "태어난 해는 언제입니까?", component: renderBirthYearSelection },
     { title: "체중이 어떻게 되십니까?", component: renderWeightSelection },
+    { title: "신장이 어떻게 되십니까?", component: renderHeightSelection },
     { title: "한달 목표 음주량이 어떻게 되나요?", component: renderDrinkingGoalSelection },
-    { title: "신장이 어떻게 되십니까?", component: renderHeightSelection }
+    { title: "질문에 맞춰서 음성을 녹음해주세요!", component: renderVoiceRecording }
   ];
 
   const isNextDisabled = step === 0 && gender === null;
 
   return (
     <View style={styles.container}>
-      <PersonalInfoHeader onBack={handleBack} />
+      <GoBackGeneralHeader onBack={handleBack} />
       <View style={styles.progressBarContainer}>
         <Animated.View style={[styles.progressBar, { width: progress.interpolate({
           inputRange: [0, 1],
@@ -166,7 +314,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#FFC124',
+    backgroundColor: '#84A2BB',
   },
   contentContainer: {
     flex: 1,
@@ -198,7 +346,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedButton: {
-    backgroundColor: '#FFC124',
+    backgroundColor: '#84A2BB',
   },
   selectionText: {
     fontSize: 18,
@@ -209,7 +357,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 50,
-    backgroundColor: '#FFC124',
+    backgroundColor: '#84A2BB',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
@@ -224,10 +372,67 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  completionText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  voiceContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  voiceQuestion: {
+    fontSize: 18,
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  micContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 20,
+  },
+  micButton: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#84A2BB',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  micText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  completeButton: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#84A2BB',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  completeText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  reRecordButton: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#84A2BB',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reRecordText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    backgroundColor: '#84A2BB',
+    borderRadius: 5,
+    marginHorizontal: 5,
   },
 });
 

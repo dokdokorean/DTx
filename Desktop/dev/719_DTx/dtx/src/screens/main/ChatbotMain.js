@@ -14,7 +14,7 @@ const ChatbotMain = () => {
   const handleChat = () => {
     // Navigate to the chat screen
     // Replace 'ChatScreen' with the actual name of your chat screen
-    navigation.navigate('ChatScreen');
+    navigation.navigate('VoiceChat');
   };
 
   return (
@@ -76,6 +76,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 10,
     paddingHorizontal: 40,
+    width:'90%',
     marginBottom: 30,
   },
   buttonText: {

@@ -33,7 +33,7 @@ const ChecklistMain = () => {
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.listItem} onPress={() => handleChecklistDetail(item)}>
       <Text style={styles.listItemText}>{item}</Text>
-      <Text style={styles.listItemArrow}></Text>
+      <Text style={styles.listItemArrow} source={require('../../assets/miniarrow.png')}></Text>
     </TouchableOpacity>
   );
 
@@ -95,7 +95,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   listItemArrow: {
-    fontSize: 18,
+    width:10,
+    height:20
   },
 });
 
