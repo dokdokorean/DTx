@@ -6,6 +6,7 @@ import {
   View,
   Animated,
   Alert,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
@@ -13,11 +14,11 @@ import { Audio } from 'expo-av';
 import axios from 'axios';
 import { BASE_URL } from '../../service/api'; // Import BASE_URL from your service/api file
 import { AuthContext } from '../../service/AuthContext'; // Adjust the path as needed
-import GoBackGeneralHeader from '../../components/GoBackGeneralHeader'; // Adjust the import path as needed
+import PersonalInfoHeader from '../../components/PersonalInfoHeader'; // Adjust the import path as needed
 
 const PersonalInfoInput = () => {
   const navigation = useNavigation();
-  const { jwtToken } = useContext(AuthContext); // Get JWT token from context
+  const { jwtToken, userId } = useContext(AuthContext); // Get JWT token and userId from context
 
   const [step, setStep] = useState(0);
   const [gender, setGender] = useState(null);
@@ -27,6 +28,7 @@ const PersonalInfoInput = () => {
   const [drinkingGoal, setDrinkingGoal] = useState('0'); // 초기값을 '0'으로 설정
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0); // New state for recording duration
   const [dotScales, setDotScales] = useState([new Animated.Value(1), new Animated.Value(1), new Animated.Value(1), new Animated.Value(1)]);
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -38,15 +40,16 @@ const PersonalInfoInput = () => {
     }).start();
   }, [step]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < steps.length - 1) {
       setStep(step + 1);
-      console.log(jwtToken); // Log the token to ensure it is correctly retrieved
-      console.log('Drinking Goal:', drinkingGoal); // Log the drinkingGoal value for debugging
-
     } else {
-      saveProfileData(); // Save profile data to backend
-      console.log('언제 되는거지 이거?')
+      if (!recording) {
+        Alert.alert('Error', '음성 녹음을 완료해주세요!');
+        return;
+      }
+      await saveProfileData(); // Save profile data to backend
+      navigation.navigate('TabNavigation'); // Navigate to TabNavigation on success
     }
   };
 
@@ -58,6 +61,8 @@ const PersonalInfoInput = () => {
         duration: 300,
         useNativeDriver: false,
       }).start();
+    } else {
+      navigation.goBack(); // Go back to previous screen if on first step
     }
   };
 
@@ -70,7 +75,7 @@ const PersonalInfoInput = () => {
           birthYear,
           weight,
           height,
-          drinkingGoal,
+          drinkingGoal, // Ensure drinkingGoal is included
         },
         {
           headers: {
@@ -81,7 +86,6 @@ const PersonalInfoInput = () => {
 
       if (response.status === 200) {
         Alert.alert('Success', 'Profile data saved successfully.');
-        navigation.navigate('TabNavigation');
       } else {
         Alert.alert('Error', 'Http 프로토콜 오류입니다');
       }
@@ -122,36 +126,49 @@ const PersonalInfoInput = () => {
     }
   };
 
-const uploadRecording = async (uri) => {
-  try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const fileName = uri.split('/').pop();
+  const uploadRecording = async (uri) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const timestamp = new Date().toISOString().replace(/[:\-T]/g, '').split('.')[0];
+      const fileName = `${userId}_${timestamp}.m4a`;
 
-    const formData = new FormData();
-    formData.append('file', blob, fileName);
+      const formData = new FormData();
+      formData.append('file', {
+        uri,
+        type: 'audio/m4a',
+        name: fileName
+      });
 
-    const uploadResponse = await fetch(`${BASE_URL}/chatbot/upload`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${jwtToken}`,
-      },
-      body: formData,
-    });
+      const uploadResponse = await fetch(`${BASE_URL}/chatbot/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'multipart/form-data'
+        },
+        body: formData,
+      });
 
-    if (uploadResponse.ok) {
-      const data = await uploadResponse.json();
-      console.log(data);
-      Alert.alert('Success', 'File uploaded successfully.');
-    } else {
-      const errorText = await uploadResponse.text();
-      throw new Error(`Upload failed: ${errorText}`);
+      if (uploadResponse.ok) {
+        const contentType = uploadResponse.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await uploadResponse.json();
+          console.log(data);
+          Alert.alert('Success', 'File uploaded successfully.');
+        } else {
+          const text = await uploadResponse.text();
+          console.log('Upload response text:', text);
+          Alert.alert('Success', 'File uploaded successfully.');
+        }
+      } else {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', `Upload failed: ${error.message}`);
     }
-  } catch (error) {
-    console.error('Upload error:', error);
-    Alert.alert('Error', `Upload failed: ${error.message}`);
-  }
-};
+  };
 
   const startDotAnimation = () => {
     dotScales.forEach((scale, index) => {
@@ -249,7 +266,7 @@ const uploadRecording = async (uri) => {
       </Text>
       <View style={styles.micContainer}>
         <TouchableOpacity onPress={startRecording} style={styles.micButton}>
-          <Text style={styles.micText}>녹음</Text>
+          <Image style={styles.micIcon} source={require('../../assets/mic.png')} />
         </TouchableOpacity>
         <TouchableOpacity onPress={stopRecording} style={styles.completeButton}>
           <Text style={styles.completeText}>완료!</Text>
@@ -267,19 +284,19 @@ const uploadRecording = async (uri) => {
   );
 
   const steps = [
-    { title: "본인에 대해 알려주시겠어요?", component: renderGenderSelection },
-    { title: "태어난 해는 언제입니까?", component: renderBirthYearSelection },
-    { title: "체중이 어떻게 되십니까?", component: renderWeightSelection },
-    { title: "신장이 어떻게 되십니까?", component: renderHeightSelection },
-    { title: "한달 목표 음주량이 어떻게 되나요?", component: renderDrinkingGoalSelection },
-    { title: "질문에 맞춰서 음성을 녹음해주세요!", component: renderVoiceRecording }
+    { title: "본인에 대해 알려주시겠어요?", ment: "😄 당신을 위한 컨텐츠를 커스텀해드릴게요!", component: renderGenderSelection },
+    { title: "태어난 해는 언제입니까?", ment: "🥳 당신의 생년을 알고 싶어요!", component: renderBirthYearSelection },
+    { title: "체중이 어떻게 되십니까?", ment: "👀 쉿! 저희만 알고 있을게요. 약속해요!", component: renderWeightSelection },
+    { title: "신장이 어떻게 되십니까?", ment: "👀 쉿! 저희만 알고 있을게요. 약속해요!", component: renderHeightSelection },
+    { title: "한달 목표 음주량이 어떻게 되나요?", ment: "🍾 아자아자! 우리 같이 노력하는거에요!", component: renderDrinkingGoalSelection },
+    { title: "질문에 맞춰서 음성을 녹음해주세요!", ment: "🎙️ 음주 전 당신의 목소리를 알고 싶어요!", component: renderVoiceRecording }
   ];
 
   const isNextDisabled = step === 0 && gender === null;
 
   return (
     <View style={styles.container}>
-      <GoBackGeneralHeader onBack={handleBack} />
+      <PersonalInfoHeader onBack={handleBack} />
       <View style={styles.progressBarContainer}>
         <Animated.View style={[styles.progressBar, { width: progress.interpolate({
           inputRange: [0, 1],
@@ -288,7 +305,7 @@ const uploadRecording = async (uri) => {
       </View>
       <View style={styles.contentContainer}>
         <Text style={styles.title}>{steps[step].title}</Text>
-        <Text style={styles.subtitle}>당신을 위한 금주 보조 컨텐츠를 커스텀해 드릴게요!</Text>
+        <Text style={styles.subtitle}>{steps[step].ment}</Text>
         {steps[step].component()}
       </View>
       <TouchableOpacity
@@ -390,14 +407,15 @@ const styles = StyleSheet.create({
   micButton: {
     width: 60,
     height: 60,
-    backgroundColor: '#84A2BB',
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    borderColor: '#84A2BB',
+    borderWidth: 2,
   },
-  micText: {
-    color: '#fff',
-    fontSize: 16,
+  micIcon: {
+    width: 30,
+    height: 30,
   },
   completeButton: {
     width: 60,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   TouchableOpacity,
   StyleSheet,
@@ -9,45 +9,21 @@ import {
   Alert,
 } from 'react-native';
 import { Audio } from 'expo-av';
-import GoBackGeneralHeader from '../../components/GoBackGeneralHeader'; // Adjust the import path as needed
+import axios from 'axios';
+import { BASE_URL } from '../../service/api'; // Import BASE_URL from your service/api file
+import { AuthContext } from '../../service/AuthContext'; // Adjust the import path as needed
 
 const VoiceChat = () => {
+  const { jwtToken, userId } = useContext(AuthContext); // Get JWT token and userId from context
+
   const [recording, setRecording] = useState(null);
   const [remainingTime, setRemainingTime] = useState(30);
   const intervalRef = useRef(null);
   const progress = useRef(new Animated.Value(1)).current;
   const [isPaused, setIsPaused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [dotScales, setDotScales] = useState([
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-  ]);
-
-  const startDotAnimation = () => {
-    dotScales.forEach((scale, index) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scale, {
-            toValue: 1.5,
-            duration: 300,
-            delay: index * 150,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    });
-  };
-
-  const stopDotAnimation = () => {
-    dotScales.forEach(scale => scale.stopAnimation());
-  };
+  const rotation = useRef(new Animated.Value(0)).current;
+  const sizeAnimation = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     return () => {
@@ -59,9 +35,9 @@ const VoiceChat = () => {
 
   useEffect(() => {
     if (isRecording && !isPaused) {
-      startDotAnimation();
+      startRotation();
     } else {
-      stopDotAnimation();
+      stopRotation();
     }
   }, [isRecording, isPaused]);
 
@@ -92,6 +68,42 @@ const VoiceChat = () => {
     }
   }, [isRecording]);
 
+  const startRotation = () => {
+    Animated.loop(
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: true,
+      })
+    ).start();
+  };
+
+  const stopRotation = () => {
+    rotation.stopAnimation();
+    rotation.setValue(0);
+  };
+
+  const startSizeAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(sizeAnimation, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sizeAnimation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  useEffect(() => {
+    startSizeAnimation();
+  }, []);
+
   const startRecording = async () => {
     try {
       const permission = await Audio.requestPermissionsAsync();
@@ -118,36 +130,51 @@ const VoiceChat = () => {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       console.log('Recording finished and stored at', uri);
-      // Upload the recording file to the server
       uploadRecording(uri);
     }
   };
 
   const uploadRecording = async (uri) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const fileName = uri.split('/').pop();
-
-    const formData = new FormData();
-    formData.append('file', blob, fileName);
-
     try {
-      const response = await fetch('http://127.0.0.1', { // Change to your local server address
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const timestamp = new Date().toISOString().replace(/[:\-T]/g, '').split('.')[0];
+      const fileName = `${userId}_${timestamp}.m4a`;
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri,
+        type: 'audio/m4a',
+        name: fileName
+      });
+
+      const uploadResponse = await fetch(`${BASE_URL}/chatbot/upload`, {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'multipart/form-data'
+        },
         body: formData,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(data);
-        Alert.alert('Success', 'File uploaded successfully.');
+      if (uploadResponse.ok) {
+        const contentType = uploadResponse.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await uploadResponse.json();
+          console.log(data);
+          Alert.alert('Success', 'File uploaded successfully.');
+        } else {
+          const text = await uploadResponse.text();
+          console.log('Upload response text:', text);
+          Alert.alert('Success', 'File uploaded successfully.');
+        }
       } else {
-        const errorText = await response.text();
-        throw new Error(errorText);
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed: ${errorText}`);
       }
     } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error', `Error: ${error.message}`);
+      console.error('Upload error:', error);
+      Alert.alert('Error', `Upload failed: ${error.message}`);
     }
   };
 
@@ -216,7 +243,7 @@ const VoiceChat = () => {
       onPress={handleRecordPress}
     >
       <Image
-        source={require('../../assets/microphone.png')} // Adjust the path to your microphone image
+        source={require('../../assets/mic.png')} // Adjust the path to your microphone image
         style={styles.icon}
       />
     </TouchableOpacity>
@@ -224,22 +251,26 @@ const VoiceChat = () => {
 
   return (
     <View style={styles.container}>
-      <GoBackGeneralHeader />
       <View style={styles.contentContainer}>
-        <View style={styles.dotsContainer}>
-          {dotScales.map((scale, index) => (
-            <Animated.View key={index} style={[styles.dot, { transform: [{ scaleY: scale }] }]} />
-          ))}
-        </View>
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>{remainingTime}</Text>
-          <View style={styles.progressBarBackground}>
-            <Animated.View style={[styles.progressBarForeground, { width: progress.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['100%', '0%']
-            }) }]} />
-          </View>
-          <Text style={styles.progressLabel}>지미와 대화 이어나가보세요!</Text>
+        <Animated.View
+          style={[
+            styles.aiImageContainer,
+            {
+              transform: [
+                { rotate: rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
+                { scale: sizeAnimation },
+              ],
+            },
+          ]}
+        >
+          <Image
+            source={require('../../assets/ai.png')} // Adjust the path to your AI image
+            style={styles.aiImage}
+          />
+        </Animated.View>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>지미에게 질문에 대답해보세요!</Text>
+          <Text style={styles.subtitle}>지미는 당신의 음성을 통해 음주 정도를 확인할 수 있어요!</Text>
         </View>
         {isRecording ? renderControlButtons() : renderMicButton()}
       </View>
@@ -258,42 +289,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 30,
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  aiImageContainer: {
     marginBottom: 20,
   },
-  dot: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#FFC124',
-    borderRadius: 10,
-    marginHorizontal: 5,
+  aiImage: {
+    width: 150,
+    height: 150,
+    resizeMode: 'contain',
   },
-  progressContainer: {
+  textContainer: {
     alignItems: 'center',
     marginBottom: 40,
   },
-  progressText: {
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
+    textAlign: 'center',
     marginBottom: 10,
   },
-  progressBarBackground: {
-    width: '100%',
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    marginBottom: 5,
-  },
-  progressBarForeground: {
-    height: '100%',
-    backgroundColor: '#FFC124',
-    borderRadius: 4,
-  },
-  progressLabel: {
+  subtitle: {
     fontSize: 16,
-    color: '#6E6E6E',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   buttonContainer: {
     flexDirection: 'row',

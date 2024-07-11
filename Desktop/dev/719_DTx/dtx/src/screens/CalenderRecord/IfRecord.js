@@ -31,20 +31,20 @@ const IfRecord = () => {
           </View>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={styles.statTitle}><Text style={{fontWeight:700}}>소주에 쓴 돈 </Text>(1500원 기준)</Text>
-              <Text style={styles.value}><Text style={styles.statValue}>1,500,000</Text> 원 아끼기</Text>
+              <Text style={[styles.statTitle,{fontSize:9}]}><Text style={{fontSize:14,fontWeight:700}}>소주를 안 먹었더라면..</Text></Text>
+              <Text style={styles.value}><Text style={styles.statValue}>3,240,500</Text> 원 저축</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statTitle,{fontWeight:700}]}>람보르기니 1대</Text>
-              <Text style={styles.value}><Text style={styles.statValue}>0.3</Text> %</Text>
+              <Text style={styles.value}><Text style={styles.statValue}>0.810</Text> %</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statTitle,{fontWeight:700,marginRight:38}]}>10일 우주여행</Text>
-              <Text style={styles.value}><Text style={styles.statValue}>0.032</Text> %</Text>
+              <Text style={styles.value}><Text style={styles.statValue}>0.000526</Text> %</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statTitle,{fontWeight:700}]}>3분 카레</Text>
-              <Text style={styles.value}><Text style={styles.statValue}>10,460</Text> 개 제조</Text>
+              <Text style={styles.value}><Text style={styles.statValue}>3,522</Text> 개 제조</Text>
             </View>
           </View>
         </View>

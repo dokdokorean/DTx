@@ -13,6 +13,7 @@ import MyinfoMain from '../screens/main/MyinfoMain';
 import Checklist from '../screens/Checklist/Checklist';
 import VoiceChat from '../screens/Chatbot/VoiceChat';
 import IfRecord from '../screens/CalenderRecord/IfRecord';
+import ChatbotResult from '../screens/Chatbot/ChatbotResult';
 
 
 const Stack = createStackNavigator();
@@ -83,6 +84,11 @@ const StackNavigation = () => {
       <Stack.Screen
         name="IfRecord"
         component={IfRecord}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChatbotResult"
+        component={ChatbotResult}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

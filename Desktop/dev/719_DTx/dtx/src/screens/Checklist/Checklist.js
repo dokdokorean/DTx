@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import GoBackGeneralHeader from '../../components/GoBackGeneralHeader';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { BASE_URL } from '../../service/api'; // Adjust the import path as needed
+import { AuthContext } from '../../service/AuthContext'; // Adjust the import path as needed
 
 const Checklist = () => {
   const navigation = useNavigation();
+  const { jwtToken } = useContext(AuthContext); // Get JWT token from context
   const [selectedValues, setSelectedValues] = useState({});
   const [result, setResult] = useState(null);
   const [allAnswered, setAllAnswered] = useState(true);
@@ -133,8 +137,38 @@ const Checklist = () => {
     setResult(total);
   };
 
-  const handleRecord = () => {
-    navigation.navigate('TabNavigation');
+  const handleRecord = async () => {
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/survey/submit`,
+        {
+          question1: selectedValues.q1,
+          question2: selectedValues.q2,
+          question3: selectedValues.q3,
+          question4: selectedValues.q4,
+          question5: selectedValues.q5,
+          question6: selectedValues.q6,
+          question7: selectedValues.q7,
+          question8: selectedValues.q8,
+          question9: selectedValues.q9,
+          question10: selectedValues.q10,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${jwtToken}`, // Attach JWT token
+          },
+        }
+      );
+      if (response.status === 200) {
+        Alert.alert('Success', 'Data saved successfully.');
+        navigation.goBack();
+      } else {
+        Alert.alert('Error', 'Failed to save data.');
+      }
+    } catch (error) {
+      console.error('Error saving data:', error);
+      Alert.alert('Error', 'Failed to save data.');
+    }
   };
 
   return (
@@ -244,8 +278,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#FFC124',
-    borderColor: '#FFC124',
+    backgroundColor: '#84A2BB',
+    borderColor: '#84A2BB',
   },
   checkmark: {
     width: 10,
@@ -257,7 +291,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#FFC124',
+    backgroundColor: '#84A2BB',
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
@@ -270,7 +304,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   warningText: {
-    color: '#FFC124',
+    color: '#84A2BB',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -290,7 +324,7 @@ const styles = StyleSheet.create({
   resultHighlight: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFC124',
+    color: '#84A2BB',
     marginBottom: 10,
   },
   resultSubtext: {
@@ -307,10 +341,10 @@ const styles = StyleSheet.create({
     height: 50,
     marginVertical: 40,
     borderWidth: 1,
-    borderColor: '#FFC124',
+    borderColor: '#84A2BB',
   },
   recordButtonText: {
-    color: '#FFC124',
+    color: '#84A2BB',
     fontSize: 18,
     fontWeight: 'bold',
   },

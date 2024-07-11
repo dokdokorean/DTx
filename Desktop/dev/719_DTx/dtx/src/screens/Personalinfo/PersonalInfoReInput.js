@@ -1,23 +1,29 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   TouchableOpacity,
   StyleSheet,
   Text,
   View,
   Animated,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import PersonalInfoHeader from '../../components/PersonalInfoHeader';
 import { Picker } from '@react-native-picker/picker';
+import axios from 'axios';
+import { BASE_URL } from '../../service/api'; // Import BASE_URL from your service/api file
+import { AuthContext } from '../../service/AuthContext'; // Adjust the path as needed
+import PersonalInfoHeader from '../../components/PersonalInfoHeader'; // Adjust the import path as needed
 
 const PersonalInfoReInput = () => {
   const navigation = useNavigation();
+  const { jwtToken, userId } = useContext(AuthContext); // Get JWT token and userId from context
+
   const [step, setStep] = useState(0);
   const [gender, setGender] = useState(null);
   const [birthYear, setBirthYear] = useState('1993');
   const [weight, setWeight] = useState('62');
-  const [drinkingGoal, setDrinkingGoal] = useState('6');
   const [height, setHeight] = useState('175');
+  const [drinkingGoal, setDrinkingGoal] = useState('0'); // 초기값을 '0'으로 설정
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -28,11 +34,12 @@ const PersonalInfoReInput = () => {
     }).start();
   }, [step]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      navigation.navigate('TabNavigation');
+      await saveProfileData(); // Save profile data to backend
+      navigation.navigate('TabNavigation'); // Navigate to TabNavigation on success
     }
   };
 
@@ -45,7 +52,35 @@ const PersonalInfoReInput = () => {
         useNativeDriver: false,
       }).start();
     } else {
-      navigation.goBack();
+      navigation.goBack(); // Go back to previous screen if on first step
+    }
+  };
+  const saveProfileData = async () => {
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/profile/update`,
+        {
+          gender,
+          birthYear,
+          weight,
+          height,
+          drinkingGoal, // Ensure drinkingGoal is included
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${jwtToken}`, // Attach JWT token
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        Alert.alert('Success', 'Profile data saved successfully.');
+      } else {
+        Alert.alert('Error', 'Http 프로토콜 오류입니다');
+      }
+    } catch (error) {
+      console.error('Error saving profile data:', error);
+      Alert.alert('Error', 'try 오류입니다');
     }
   };
 
@@ -96,8 +131,8 @@ const PersonalInfoReInput = () => {
       style={styles.picker}
       onValueChange={(itemValue) => setDrinkingGoal(itemValue)}
     >
-      {Array.from({ length: 16 }, (_, i) => 0 + i).map(goal => (
-        <Picker.Item key={goal} label={`${goal} 병`} value={String(goal)} />
+      {Array.from({ length: 16 }, (_, i) => 0 + i).map(drinkingGoal => (
+        <Picker.Item key={drinkingGoal} label={`${drinkingGoal} 병`} value={String(drinkingGoal)} />
       ))}
     </Picker>
   );
@@ -115,11 +150,11 @@ const PersonalInfoReInput = () => {
   );
 
   const steps = [
-    { title: "본인에 대해 알려주시겠어요?", component: renderGenderSelection },
-    { title: "태어난 해는 언제입니까?", component: renderBirthYearSelection },
-    { title: "체중이 어떻게 되십니까?", component: renderWeightSelection },
-    { title: "한달 목표 음주량이 어떻게 되나요?", component: renderDrinkingGoalSelection },
-    { title: "신장이 어떻게 되십니까?", component: renderHeightSelection }
+    { title: "본인에 대해 알려주시겠어요?", ment: "😄 당신을 위한 컨텐츠를 커스텀해드릴게요!", component: renderGenderSelection },
+    { title: "태어난 해는 언제입니까?", ment: "🥳 당신의 생년을 알고 싶어요!", component: renderBirthYearSelection },
+    { title: "체중이 어떻게 되십니까?", ment: "👀 쉿! 저희만 알고 있을게요. 약속해요!", component: renderWeightSelection },
+    { title: "신장이 어떻게 되십니까?", ment: "👀 쉿! 저희만 알고 있을게요. 약속해요!", component: renderHeightSelection },
+    { title: "한달 목표 음주량이 어떻게 되나요?", ment: "🍾 아자아자! 우리 같이 노력하는거에요!", component: renderDrinkingGoalSelection }
   ];
 
   const isNextDisabled = step === 0 && gender === null;
@@ -135,7 +170,7 @@ const PersonalInfoReInput = () => {
       </View>
       <View style={styles.contentContainer}>
         <Text style={styles.title}>{steps[step].title}</Text>
-        <Text style={styles.subtitle}>당신을 위한 금주 보조 컨텐츠를 커스텀해 드릴게요!</Text>
+        <Text style={styles.subtitle}>{steps[step].ment}</Text>
         {steps[step].component()}
       </View>
       <TouchableOpacity
@@ -161,7 +196,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#FFC124',
+    backgroundColor: '#84A2BB',
   },
   contentContainer: {
     flex: 1,
@@ -193,7 +228,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedButton: {
-    backgroundColor: '#FFC124',
+    backgroundColor: '#84A2BB',
   },
   selectionText: {
     fontSize: 18,
@@ -204,7 +239,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 50,
-    backgroundColor: '#FFC124',
+    backgroundColor: '#84A2BB',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
@@ -218,11 +253,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  completionText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
 });
 

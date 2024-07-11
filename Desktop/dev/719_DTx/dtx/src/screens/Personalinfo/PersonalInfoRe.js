@@ -4,12 +4,11 @@ import {
   StyleSheet,
   Text,
   View,
-  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import GoBackGeneralHeader from '../../components/GoBackGeneralHeader'; // Make sure to adjust the path as needed
+import GoBackGeneralHeader from '../../components/GoBackGeneralHeader';
 
-const PersonalInfoRe = () => {
+const PersonalInfoScreen = () => {
   const navigation = useNavigation();
 
   const handleNext = () => {
@@ -18,16 +17,12 @@ const PersonalInfoRe = () => {
 
   return (
     <View style={styles.container}>
-      <GoBackGeneralHeader />
+      <GoBackGeneralHeader/>
       <View style={styles.content}>
-        <Image
-          source={require('../../assets/Mainlogo.png')} // Ensure this path is correct
-          style={styles.logo}
-        />
         <Text style={styles.title}>
           <Text style={styles.highlight}>금주</Text>, {'\n'}우리가 도와줄게요!
         </Text>
-        <Text style={styles.subtitle}>본인에 대해 다시 기록하러 오셨군요!</Text>
+        <Text style={styles.subtitle}>본인에 대해서 알려주시겠어요?</Text>
         <Text style={styles.description}>
           음주 정도를 본인에게 더 잘 맞추기 위해 몇 가지 질문을 드리겠습니다.
         </Text>
@@ -45,24 +40,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-  logo: {
-    width: 250,
-    height: 300,
-    marginBottom: 30,
+    width: '100%',
+    marginTop:250,
+    paddingHorizontal:30
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'left',
-    width: '100%',
+    marginBottom: 20,
   },
   highlight: {
-    color: '#FFC107',
+    color: '#000',
   },
   subtitle: {
     fontSize: 16,
@@ -75,15 +64,16 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     width: '100%',
     color: '#7D7D7D',
-    marginBottom: 80,
+    marginBottom: 50,
   },
   button: {
     height: 50,
     width: '100%',
-    backgroundColor: '#D3D3D3',
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
+    marginTop:170
   },
   buttonText: {
     color: '#000',
@@ -92,4 +82,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PersonalInfoRe;
+export default PersonalInfoScreen;

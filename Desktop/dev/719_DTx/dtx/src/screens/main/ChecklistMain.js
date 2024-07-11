@@ -5,6 +5,7 @@ import {
   Text,
   View,
   FlatList,
+  Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -33,7 +34,7 @@ const ChecklistMain = () => {
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.listItem} onPress={() => handleChecklistDetail(item)}>
       <Text style={styles.listItemText}>{item}</Text>
-      <Text style={styles.listItemArrow} source={require('../../assets/miniarrow.png')}></Text>
+      <Image style={styles.listItemArrow} source={require('../../assets/miniarrow.png')}></Image>
     </TouchableOpacity>
   );
 
@@ -66,12 +67,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logButton: {
-    backgroundColor: '#FFC124',
-    borderRadius: 10,
+    backgroundColor: '#84A2BB',
+    borderRadius: 20,
     paddingVertical: 15,
     paddingHorizontal: 20,
     alignItems: 'center',
     marginBottom: 20,
+    width:200
   },
   logButtonText: {
     color: '#fff',
@@ -95,8 +97,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   listItemArrow: {
-    width:10,
-    height:20
+    width:8,
+    height:20,
+    resizeMode:'contain'
   },
 });
 
