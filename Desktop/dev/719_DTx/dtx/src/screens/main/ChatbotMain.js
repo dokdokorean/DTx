@@ -96,24 +96,20 @@ const VoiceChat = ({ navigation }) => {
           toValue: 1.05,
           duration: 1000,
           useNativeDriver: true,
-          
         }),
         Animated.timing(sizeAnimation, {
           toValue: 1,
           duration: 1000,
           useNativeDriver: true,
-        }),
+        })
       ])
     ).start();
   };
 
-  useEffect(() => {
-    startSizeAnimation();
-  }, []);
-
   useFocusEffect(
     React.useCallback(() => {
       resetState();
+      startSizeAnimation();
     }, [])
   );
 
@@ -188,13 +184,11 @@ const VoiceChat = ({ navigation }) => {
         const contentType = uploadResponse.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await uploadResponse.json();
-          console.log('Input Text:', data.inputText); // Print inputText
-          console.log('GPT Response:', data.gptResponse); // Print gptResponse
-          
-          // Store the data using AsyncStorage
-          await storeResponseData(questionIndex, data.inputText, data.gptResponse);
-
-          // Update the question for the next iteration
+          if (questionIndex === 4) {
+            await storeResponseData(questionIndex, data.inputText,"성실히 답변해주셔서 감사합니다!");
+          } else {
+            await storeResponseData(questionIndex, data.inputText, data.gptResponse);
+          }
           setQuestion(data.gptResponse);
           setQuestionIndex(prevIndex => prevIndex + 1);
 
@@ -217,7 +211,6 @@ const VoiceChat = ({ navigation }) => {
       setIsLoading(false);
     }
   };
-
   const storeResponseData = async (index, inputText, gptResponse) => {
     try {
       await AsyncStorage.setItem(`response_${index}`, JSON.stringify({ inputText, gptResponse }));

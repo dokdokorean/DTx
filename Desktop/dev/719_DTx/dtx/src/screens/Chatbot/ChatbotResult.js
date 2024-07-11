@@ -66,6 +66,12 @@ const ChatbotResult = () => {
         <View style={{ margin:20,borderBottomWidth: 1, borderBottomColor: '#DADADA', marginBottom: 20 }}>
             <Text style={styles.date}>{currentDate}</Text>
         </View>
+            <View style={{ flexDirection: 'row' }}>
+                <Image style={{ width: 35, height: 35, top: 4, resizeMode: 'contain' }} source={require('../../assets/question_icon.png')}></Image>
+                <View style={[styles.answerContainer,{marginBottom:15}]}>
+                    <Text style={styles.answerText}>어제 있었던 일 중에서 가장 기억에 남는 일이 무엇이었나요?</Text>
+                </View>
+            </View>
         {responses.map((response, index) => (
             <View key={index} style={styles.responseContainer}>
             <View style={styles.questionContainer}>
