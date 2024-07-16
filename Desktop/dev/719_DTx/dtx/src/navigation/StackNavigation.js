@@ -14,6 +14,7 @@ import Checklist from '../screens/Checklist/Checklist';
 import VoiceChat from '../screens/Chatbot/VoiceChat';
 import IfRecord from '../screens/CalenderRecord/IfRecord';
 import ChatbotResult from '../screens/Chatbot/ChatbotResult';
+import ChecklistDetailScreen from '../screens/Checklist/ChecklistDetailScreen'
 
 
 const Stack = createStackNavigator();
@@ -49,7 +50,7 @@ const StackNavigation = () => {
       <Stack.Screen
         name="TabNavigation"
         component={TabNavigation}
-        options={{ headerShown: false }}
+        options={{ headerShown: false,gestureEnabled: false }}
       />
       <Stack.Screen
         name="CalenderMain"
@@ -89,6 +90,11 @@ const StackNavigation = () => {
       <Stack.Screen
         name="ChatbotResult"
         component={ChatbotResult}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChecklistDetailScreen"
+        component={ChecklistDetailScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

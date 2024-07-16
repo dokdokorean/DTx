@@ -18,7 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 const VoiceChat = ({ navigation }) => {
   const { jwtToken, userId } = useContext(AuthContext);
-
+  const [sessionId, setSessionId] = useState(null);
   const [recording, setRecording] = useState(null);
   const [remainingTime, setRemainingTime] = useState(30);
   const [question, setQuestion] = useState("어제 있었던 일 중에서 가장 기억에 남는 일이 무엇이었나요?");
@@ -153,8 +153,72 @@ const VoiceChat = ({ navigation }) => {
       const uri = recording.getURI();
       console.log('Recording finished and stored at', uri);
       uploadRecording(uri);
+      uploadAiRecording(uri);
     }
   };
+
+  const uploadAiRecording = async (uri) => {
+  setIsLoading(true);
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const timestamp = new Date().toISOString().replace(/[:\-T]/g, '').split('.')[0];
+    const fileName = `${userId}_${timestamp}.m4a`;
+
+    const formData = new FormData();
+    formData.append('audio_file', {
+      uri,
+      type: 'audio/m4a',
+      name: fileName
+    });
+
+    let uploadResponse;
+    if (questionIndex === 0) {
+      uploadResponse = await fetch('http://165.132.223.29/ai/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'multipart/form-data'
+        },
+        body: formData,
+      });
+    } else {
+      // 이전 요청의 session_id를 가져옵니다.
+      const storedSessionId = await AsyncStorage.getItem('session_id');
+      uploadResponse = await fetch('http://165.132.223.29/ai/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'multipart/form-data',
+          'Session-ID': storedSessionId
+        },
+        body: formData,
+      });
+    }
+
+    if (uploadResponse.ok) {
+      const contentType = uploadResponse.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await uploadResponse.json();
+        console.log('Session ID:', data.session_id); // Session ID 출력
+
+        // 첫 번째 질문 이후에 sessionId 상태를 업데이트하고 AsyncStorage에 저장합니다.
+        if (questionIndex === 0) {
+          setSessionId(data.session_id);
+          await AsyncStorage.setItem('session_id', data.session_id);
+        }
+      }
+    } else {
+      const errorText = await uploadResponse.text();
+      throw new Error(`Upload failed: ${errorText}`);
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    Alert.alert('Error', `Upload failed: ${error.message}`);
+    setIsLoading(false);
+  }
+};
+
 
   const uploadRecording = async (uri) => {
     setIsLoading(true);
@@ -184,7 +248,7 @@ const VoiceChat = ({ navigation }) => {
         const contentType = uploadResponse.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await uploadResponse.json();
-          if (questionIndex === 4) {
+          if (questionIndex === 9) {
             await storeResponseData(questionIndex, data.inputText,"성실히 답변해주셔서 감사합니다!");
           } else {
             await storeResponseData(questionIndex, data.inputText, data.gptResponse);
@@ -194,7 +258,7 @@ const VoiceChat = ({ navigation }) => {
 
           setIsLoading(false);
 
-          if (questionIndex + 1 >= 5) {
+          if (questionIndex + 1 >= 10) {
             navigation.navigate('ChatbotResult');
           }
         } else {
@@ -296,7 +360,7 @@ const VoiceChat = ({ navigation }) => {
 
   const renderDefaultMent = () => (
     <Text style={{width:260,height:120,textAlign:'center',marginTop:10}}>
-      <Text style={{fontWeight:700,fontSize:18,marginTop:60}}>어제 있었던 일 중에서 가장 기억에 남는 일이 무엇이었나요?{'\n'}</Text>
+      <Text style={{fontWeight:'700',fontSize:18,marginTop:60}}>어제 있었던 일 중에서 가장 기억에 남는 일이 무엇이었나요?{'\n'}</Text>
       <Text style={{width:220,height:100,textAlign:'center',fontSize:13,marginTop:60}}>{'\n'}지미의 질문에 대답해주세요</Text>      
     </Text>
   );
@@ -307,14 +371,14 @@ const VoiceChat = ({ navigation }) => {
 
   const generateAiQestion = () => (
     <Text style={{width:280,height:120,textAlign:'center',marginTop:10}}>
-      <Text style={{fontWeight:700,fontSize:18,marginTop:60}}>{question}{'\n'}</Text>
+      <Text style={{fontWeight:'700',fontSize:18,marginTop:60}}>{question}{'\n'}</Text>
       <Text style={{width:220,height:100,textAlign:'center',fontSize:10,marginTop:60}}>{'\n'}지미의 질문에 대답해주세요</Text>      
     </Text>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.progressIndicator}>{`${questionIndex}/5`}</Text>
+      <Text style={styles.progressIndicator}>{`${questionIndex}/10`}</Text>
       <View style={styles.contentContainer}>
         <Animated.View
           style={[
@@ -357,7 +421,7 @@ const styles = StyleSheet.create({
   progressIndicator: {
     marginTop: 90,
     fontSize: 20,
-    fontWeight: 300,
+    fontWeight: '300',
     textAlign: 'center',
   },
   contentContainer: {

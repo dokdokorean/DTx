@@ -1,12 +1,12 @@
 import React from 'react';
-import { TouchableOpacity, Image, StyleSheet, Pressable, View } from 'react-native';
+import { TouchableOpacity, Image, StyleSheet, Pressable, View,Platform } from 'react-native';
 
 const PersonalInfoHeader = ({ onBack }) => {
   return (
     <View style={styles.view}>
       <Pressable style={styles.backButton} onPress={onBack}>
         <Image
-          source={require('../assets/backlinearrow.png')} // Make sure the path is correct
+          source={require('../assets/backlinearrow.png')}
           style={styles.image}
         />
       </Pressable>
@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     marginLeft: '7%',
-    marginTop: '16%',
+    marginTop: Platform.OS === 'ios' ? '16%' : '6%',
   },
   image: {
     width: 30,

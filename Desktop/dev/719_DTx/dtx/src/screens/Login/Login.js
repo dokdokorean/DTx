@@ -78,10 +78,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   logo: {
-    width: 150,
-    height: 150,
-    marginTop: 100,
-    marginBottom: 130,
+    width: 180,
+    resizeMode:'contain',
+    marginTop: 110,
+    marginBottom: 120,
   },
   input: {
     height: 50,

@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Modal, Platform, Alert } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { Entypo } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-
+import { BASE_URL } from '../../service/api';
+import { AuthContext } from '../../service/AuthContext';
 
 const CalendarMain = () => {
+  const { jwtToken } = useContext(AuthContext);
   const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showDetails, setshowDetails] = useState(false);
   const [alcoholType, setAlcoholType] = useState('soju');
   const [records, setRecords] = useState({
     soju: 0,
@@ -23,6 +26,7 @@ const CalendarMain = () => {
 
   useEffect(() => {
     updateWeekDays(selectedDate);
+    fetchRecords(format(selectedDate, 'yyyy-MM-dd'));
   }, [selectedDate]);
 
   const updateWeekDays = (date) => {
@@ -35,14 +39,17 @@ const CalendarMain = () => {
     const date = new Date(day.dateString);
     setSelectedDate(date);
     setShowCalendar(false);
+    fetchRecords(format(selectedDate, 'yyyy-MM-dd'));
   };
 
   const handleTodayPress = () => {
     const today = new Date();
     setSelectedDate(today);
+    fetchRecords(format(selectedDate, 'yyyy-MM-dd'));
   };
-  const gostatistics = ()=>{
-    navigation.navigate('IfRecord')
+
+  const gostatistics = () => {
+    navigation.navigate('IfRecord');
   };
 
   const alcoholIcons = {
@@ -72,13 +79,76 @@ const CalendarMain = () => {
     });
   };
 
+  const saveRecords = async () => {
+    const drinkDate = format(selectedDate, 'yyyy-MM-dd');
+    const data = {
+      drinkDate,
+      soju: records.soju,
+      beer: records.beer,
+      makgeolli: records.makgeolli,
+      wine: records.wine,
+      whiskey: records.liquor, // Assuming 'liquor' in your state corresponds to 'whiskey' in the API
+      cocktail: records.cocktail,
+    };
+
+    try {
+      const response = await fetch(`${BASE_URL}/drink-records/record`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        console.log('Records saved successfully');
+        Alert.alert('저장되었습니다!');
+      } else {
+        console.error('Failed to save records');
+      }
+    } catch (error) {
+      console.error('Error saving records:', error);
+    }
+  };
+
+  const fetchRecords = async (date) => {
+    try {
+      const response = await fetch(`${BASE_URL}/drink-records/by-date?date=${date}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRecords({
+          soju: data.soju || 0,
+          beer: data.beer || 0,
+          makgeolli: data.makgeolli || 0,
+          wine: data.wine || 0,
+          liquor: data.whiskey || 0, // Assuming 'whiskey' in the API corresponds to 'liquor' in your state
+          cocktail: data.cocktail || 0,
+        });
+        console.log(data);
+        console.log(date)
+      } else {
+        console.error('Failed to fetch records');
+      }
+    } catch (error) {
+      console.error('Error fetching records:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleTodayPress} style={styles.todayButton}>
           <Text style={styles.todayText}>오늘</Text>
         </TouchableOpacity>
-       <TouchableOpacity onPress={() => setShowCalendar(!showCalendar)} style={styles.monthButton}>
+        <TouchableOpacity onPress={() => setShowCalendar(!showCalendar)} style={styles.monthButton}>
           <Text style={styles.monthText}>{format(selectedDate, 'MMMM yyyy')}</Text>
           <Entypo name="chevron-down" size={20} color="#84A2BB" />
         </TouchableOpacity>
@@ -98,6 +168,11 @@ const CalendarMain = () => {
           </TouchableOpacity>
         ))}
       </View>
+      <Modal transparent visible={showDetails} onRequestClose={() => setshowDetails(false)}>
+        <TouchableOpacity style={styles.modalBackground} onPress={() => setshowDetails(false)}>
+          <Image style={{ width: '100%', resizeMode: 'contain' }} source={require('../../assets/showdetails.png')} />
+        </TouchableOpacity>
+      </Modal>
       <Modal transparent visible={showCalendar} onRequestClose={() => setShowCalendar(false)}>
         <TouchableOpacity style={styles.modalBackground} onPress={() => setShowCalendar(false)}>
           <View style={styles.calendarContainer}>
@@ -109,68 +184,95 @@ const CalendarMain = () => {
         </TouchableOpacity>
       </Modal>
       <View style={styles.mainView}>
-      <Text style={styles.dateText}>{format(selectedDate, 'M월 d일')}</Text>
-      <View style={styles.recordsTextView}>
-        <Text>
-          {Object.keys(records).map((key) =>
-          records[key] > 0 ? (
-            <Text style={styles.recordTextmain} key={key}>
-              {key === 'soju' && '소주'}
-              {key === 'beer' && '맥주'}
-              {key === 'makgeolli' && '막걸리'}
-              {key === 'wine' && '와인'}
-              {key === 'liquor' && '양주'}
-              {key === 'cocktail' && '칵테일'}
-              {` ${records[key]}병 · `}
-            </Text>
-          ) : null
-        )}
-        </Text>
-      </View>
-      <View style={styles.alcoholContainer}>
-        <Text style={styles.recordText}>✏️ 기록하기</Text>
-        <TouchableOpacity onPress={() => console.log('Details')}>
-          <Text style={styles.detailsText}>상세정보</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.recordContainer}>
-        {Object.keys(alcoholIcons).map((key) => (
-          <TouchableOpacity
-            key={key}
-            style={styles.alcoholButton}
-            onPress={() => setAlcoholType(key)}
-          >
-            <View style={[styles.alcoholIconContainer, alcoholType === key && styles.selectedAlcoholButton]}>
-              <Image source={alcoholIcons[key]} style={styles.alcoholIcon} />
-            </View>
-            <Text style={styles.alcoholText}>
-              {key === 'soju' && '소주'}
-              {key === 'beer' && '맥주'}
-              {key === 'makgeolli' && '막걸리'}
-              {key === 'wine' && '와인'}
-              {key === 'liquor' && '양주'}
-              {key === 'cocktail' && '칵테일'}
-            </Text>
+        <Text style={styles.dateText}>{format(selectedDate, 'M월 d일')}</Text>
+        <View style={styles.recordsTextView}>
+          <Text>
+            {Object.keys(records).map((key) =>
+              records[key] > 0 ? (
+                <Text style={styles.recordTextmain} key={key}>
+                  {key === 'soju' && '소주'}
+                  {key === 'beer' && '맥주'}
+                  {key === 'makgeolli' && '막걸리'}
+                  {key === 'wine' && '와인'}
+                  {key === 'liquor' && '양주'}
+                  {key === 'cocktail' && '칵테일'}
+                  {` ${records[key]}병 · `}
+                </Text>
+              ) : null
+            )}
+          </Text>
+          <TouchableOpacity style={styles.resetButton} onPress={resetRecords}>
+            <Text style={styles.resetText}>초기화</Text>
           </TouchableOpacity>
-        ))}
-      </View>
-      <View style={styles.quantityContainer}>
-        <TouchableOpacity onPress={() => handleQuantityChange(alcoholType, -0.5)} style={styles.quantityButton}>
-          <Text style={styles.quantityButtonText}>-</Text>
-        </TouchableOpacity>
-        <Text style={styles.quantityText}>{records[alcoholType]}병</Text>
-        <TouchableOpacity onPress={() => handleQuantityChange(alcoholType, 0.5)} style={styles.quantityButton}>
-          <Text style={styles.quantityButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity style={styles.resetButton} onPress={resetRecords}>
-        <Text style={styles.resetText}>초기화</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={gostatistics}>
-        <View style={styles.ifggbutton}>
-          <Text style={{fontSize:15,color:'#fff'}}>내가 술을 이렇게 많이 먹엇다고🫢?!</Text>
         </View>
-      </TouchableOpacity>
+        <View style={styles.alcoholContainer}>
+          <Text style={styles.recordText}>✏️ 기록하기</Text>
+          <TouchableOpacity onPress={() => setshowDetails(!showDetails)}>
+            <View style={{ flexDirection: 'row' }}>
+              <Image
+                style={{ resizeMode: 'contain', width: 15, height: 15 }}
+                source={require('../../assets/info.png')}
+              />
+              <Text style={styles.detailsText}> 상세정보</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.recordContainer}>
+          {Object.keys(alcoholIcons).map((key) => (
+            <TouchableOpacity
+              key={key}
+              style={styles.alcoholButton}
+              onPress={() => setAlcoholType(key)}
+            >
+              <View
+                style={[
+                  styles.alcoholIconContainer,
+                  alcoholType === key && styles.selectedAlcoholButton,
+                ]}
+              >
+                <Image source={alcoholIcons[key]} style={styles.alcoholIcon} />
+              </View>
+              <Text style={styles.alcoholText}>
+                {key === 'soju' && '소주'}
+                {key === 'beer' && '맥주'}
+                {key === 'makgeolli' && '막걸리'}
+                {key === 'wine' && '와인'}
+                {key === 'liquor' && '양주'}
+                {key === 'cocktail' && '칵테일'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.quantityContainer}>
+          <TouchableOpacity
+            onPress={() => handleQuantityChange(alcoholType, -0.5)}
+            style={[styles.quantityButton, { left: -20 }]}
+          >
+            <Text style={styles.quantityButtonText}>-</Text>
+          </TouchableOpacity>
+          <Text style={styles.quantityText}>{records[alcoholType]}병</Text>
+          <TouchableOpacity
+            onPress={() => handleQuantityChange(alcoholType, 0.5)}
+            style={[styles.quantityButton, { left: 20 }]}
+          >
+            <Text style={styles.quantityButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={saveRecords}>
+          <View style={styles.savebutton}>
+            <Text style={{ fontSize: 17, color: '#84A2BB', width: '100%', textAlign: 'center' }}>
+              기록 완료
+            </Text>
+          </View>
+        </TouchableOpacity>
+        <View style={{ borderBottomWidth: 1, borderBottomColor: '#DADADA', marginTop: 12.5 }}></View>
+        <TouchableOpacity onPress={gostatistics}>
+          <View style={styles.ifggbutton}>
+            <Text style={{ fontSize: 15, color: '#fff', width: '100%', textAlign: 'center' }}>
+              내가 술을 이렇게 많이 먹엇다고🫢?!
+            </Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -183,36 +285,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#fff',
   },
-  mainView:{
-    margin:20
+  mainView: {
+    margin: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop:40,
+    marginTop: Platform.OS === 'ios' ? 40 : 0,
     marginBottom: 16,
   },
   todayButton: {
-    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#BBBBBB',
+    backgroundColor: '#fff',
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 20,
+    height: Platform.OS === 'ios' ? 25 : 30,
   },
-  recordTextmain:{
-    color:'#707070',
-    fontWeight:600
+  recordTextmain: {
+    color: '#707070',
+    fontWeight: 600,
   },
   todayText: {
-    fontSize: 16,
-    color: '#84A2BB',
+    fontSize: 14,
+    color: '#BBBBBB',
   },
   monthButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    marginRight:30
+    marginRight: 30,
   },
   monthText: {
     fontSize: 16,
@@ -223,18 +328,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginVertical: 16,
-    height:10
+    height: 10,
   },
   weekDayText: {
     fontSize: 16,
     color: '#000',
-    height:30
+    height: 30,
   },
   selectedDayText: {
     color: '#84A2BB',
     borderRadius: 10,
-    paddingVertical:10,
-    top:-9.5,
+    paddingVertical: 10,
+    top: -9.5,
   },
   modalBackground: {
     flex: 1,
@@ -263,14 +368,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 5,
   },
   recordText: {
     fontSize: 16,
   },
   detailsText: {
-    fontSize: 16,
-    color: '#84A2BB',
+    fontSize: 13,
+    color: '#707070',
   },
   recordContainer: {
     flexDirection: 'row',
@@ -281,14 +386,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
     padding: 10,
   },
   alcoholButton: {
     alignItems: 'center',
-    marginVertical:15,
+    marginVertical: 15,
     width: '30%',
   },
   selectedAlcoholButton: {
@@ -314,44 +419,57 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 16,
+    marginVertical: 10,
   },
   quantityButton: {
     fontSize: 24,
     color: '#84A2BB',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 35,
+    height: 35,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#84A2BB',
     marginHorizontal: 20,
   },
   quantityButtonText: {
-    fontSize: 24,
-    color: '#84A2BB',
+    fontSize: 30,
+    width: '100%',
+    textAlign: 'center',
+    color: '#fff',
   },
   quantityText: {
     fontSize: 18,
     fontWeight: 'bold',
   },
   resetButton: {
-    alignSelf: 'center',
-    marginVertical: 8,
+    position: 'absolute',
+    right: 0,
+    marginVertical: 0,
   },
   resetText: {
-    color: '#84A2BB',
-    textDecorationLine: 'underline',
+    color: '#707070',
   },
-  ifggbutton:{
-    marginTop:20,
-    width:'100%',
-    backgroundColor:'#84A2BB',
-    borderRadius:15,
-    alignItems:'center',
-    justifyContent:'center',
-    height:45,
-  }
+  savebutton: {
+    marginTop: 15,
+    width: '100%',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#84A2BB',
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+  },
+  ifggbutton: {
+    marginTop: 12.5,
+    width: '100%',
+    backgroundColor: '#84A2BB',
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 45,
+  },
 });
 
 export default CalendarMain;

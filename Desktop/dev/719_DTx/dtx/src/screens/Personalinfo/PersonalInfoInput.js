@@ -7,6 +7,7 @@ import {
   Animated,
   Alert,
   Image,
+  Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
@@ -85,7 +86,7 @@ const PersonalInfoInput = () => {
       );
 
       if (response.status === 200) {
-        Alert.alert('Success', 'Profile data saved successfully.');
+        Alert.alert('완료!', '사용자님의 정보가 안전하게 저장되었습니다😀');
       } else {
         Alert.alert('Error', 'Http 프로토콜 오류입니다');
       }
@@ -123,6 +124,7 @@ const PersonalInfoInput = () => {
       const uri = recording.getURI();
       console.log('Recording finished and stored at', uri);
       uploadRecording(uri);
+      stopDotAnimation();
     }
   };
 
@@ -130,16 +132,14 @@ const PersonalInfoInput = () => {
     try {
       const response = await fetch(uri);
       const blob = await response.blob();
-      const timestamp = new Date().toISOString().replace(/[:\-T]/g, '').split('.')[0];
-      const fileName = `${userId}_${timestamp}.m4a`;
-
+      const fileName = `${userId}${step}.m4a`;
       const formData = new FormData();
       formData.append('file', {
         uri,
         type: 'audio/m4a',
         name: fileName
       });
-
+      console.log(fileName)
       const uploadResponse = await fetch(`${BASE_URL}/chatbot/upload`, {
         method: 'POST',
         headers: {
@@ -154,11 +154,11 @@ const PersonalInfoInput = () => {
         if (contentType && contentType.includes('application/json')) {
           const data = await uploadResponse.json();
           console.log(data);
-          Alert.alert('Success', 'File uploaded successfully.');
+          Alert.alert('성공!', '음성 파일이 성공적으로 업로드 되었습니다');
         } else {
           const text = await uploadResponse.text();
           console.log('Upload response text:', text);
-          Alert.alert('Success', 'File uploaded successfully.');
+          Alert.alert('성공!', '음성 파일이 성공적으로 업로드 되었습니다');
         }
       } else {
         const errorText = await uploadResponse.text();
@@ -172,21 +172,22 @@ const PersonalInfoInput = () => {
 
   const startDotAnimation = () => {
     dotScales.forEach((scale, index) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scale, {
-            toValue: 1.5,
-            duration: 300,
-            delay: index * 150,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+      setTimeout(() => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 1.5,
+              duration: 600,
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 1,
+              duration: 600,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      }, index * 250); // 150ms 간격으로 각 애니메이션 시작
     });
   };
 
@@ -268,17 +269,19 @@ const PersonalInfoInput = () => {
         <TouchableOpacity onPress={startRecording} style={styles.micButton}>
           <Image style={styles.micIcon} source={require('../../assets/mic.png')} />
         </TouchableOpacity>
+      </View>
+      <View style={styles.dotsContainer}>
+        {dotScales.map((scale, index) => (
+          <Animated.View key={index} style={[styles.dot, { transform: [{ scale }] }]} />
+        ))}
+      </View>
+      <View style={{flexDirection:'row', marginBottom: Platform.OS === 'ios' ? -55 : 0,}}>
         <TouchableOpacity onPress={stopRecording} style={styles.completeButton}>
           <Text style={styles.completeText}>완료!</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={startRecording} style={styles.reRecordButton}>
           <Text style={styles.reRecordText}>재녹음</Text>
         </TouchableOpacity>
-      </View>
-      <View style={styles.dotsContainer}>
-        {dotScales.map((scale, index) => (
-          <Animated.View key={index} style={[styles.dot, { transform: [{ scale }] }]} />
-        ))}
       </View>
     </View>
   );
@@ -328,6 +331,7 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: '#E0E0E0',
     width: '100%',
+    top: Platform.OS === 'ios' ? 0 : -35,
   },
   progressBar: {
     height: 4,
@@ -403,6 +407,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     width: '100%',
     marginBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 35 : 0
   },
   micButton: {
     width: 60,
@@ -416,30 +421,37 @@ const styles = StyleSheet.create({
   micIcon: {
     width: 30,
     height: 30,
+    resizeMode:'contain'
   },
   completeButton: {
-    width: 60,
-    height: 60,
+    width: 120,
+    height: 50,
     backgroundColor: '#84A2BB',
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop:50,
+    marginRight:20
   },
   completeText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: Platform.OS === 'ios' ? 18 : 16
   },
   reRecordButton: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#84A2BB',
+    width: 120,
+    height: 50,
+    backgroundColor: '#fff',
     borderRadius: 30,
+    borderWidth:1,
+    borderColor:'#84A2BB',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop:50,
+    marginLeft:20
   },
   reRecordText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#84A2BB',
+    fontSize: Platform.OS === 'ios' ? 18 : 16
   },
   dotsContainer: {
     flexDirection: 'row',
