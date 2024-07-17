@@ -19,6 +19,7 @@ const MyinfoMain = () => {
   const [birthYear, setBirthYear] = useState('해당없음');
   const [weight, setWeight] = useState('해당없음');
   const [height, setHeight] = useState('해당없음');
+  const [monthlyDrinkGoal, setMonthlyDrinkGoal] = useState('해당없음');
   const { jwtToken, userId } = useContext(AuthContext); // Get JWT token and userId from context
 
   useEffect(() => {
@@ -35,6 +36,7 @@ const MyinfoMain = () => {
         setBirthYear(data.birthYear ? `${data.birthYear}년생` : '해당없음');
         setWeight(data.weight ? `${data.weight}kg` : '해당없음');
         setHeight(data.height ? `${data.height}cm` : '해당없음');
+        setMonthlyDrinkGoal(data.monthlyDrinkGoal ? `${data.monthlyDrinkGoal}` : '해당없음');
       } catch (error) {
         console.error('Failed to load profile information:', error);
       }
@@ -48,16 +50,38 @@ const MyinfoMain = () => {
   };
 
   const handleLogout = () => {
-    navigation.navigate('Login')
+    navigation.navigate('Login');
+  };
+
+  const calculateLeftPosition = (goal) => {
+    const maxGoal = 20; // Assuming 20 is the maximum goal for calculation purposes
+    const width = 330; // Width of the parent container (adjust as needed)
+    const position = (goal / maxGoal) * width;
+    return position;
+  };
+
+  const getMentImage = (goal) => {
+    if (goal === '해당없음') return require('../../assets/myinfoment1.png');
+    const goalValue = parseFloat(goal);
+    if (goalValue < 5.5) return require('../../assets/myinfoment1.png');
+    if (goalValue === 5.5) return require('../../assets/myinfoment2.png');
+    return require('../../assets/myinfoment3.png');
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.title}>
-        <Text style={{fontSize:27,marginTop:25,marginBottom:15, fontWeight:'700'}}>마이</Text>
-        <Text style={{fontSize:13,color:'#707070',marginBottom:-13}}>{`${gender} · ${birthYear} · ${weight} · ${height}`}</Text>
+        <Text style={{ fontSize: 27, marginTop: 25, marginBottom: 15, fontWeight: '700' }}>마이</Text>
+        <Text style={{ fontSize: 13, color: '#707070', marginBottom: -13 }}>{`${gender} · ${birthYear} · ${weight} · ${height}`}</Text>
       </View>
-      <Image style={{resizeMode:'contain',width:'95%',left:-5}} source={require('../../assets/personalgoal.png')}></Image>
+      <View style={{ height: 160 }}>
+        <Image style={{ resizeMode: 'contain', width: '100%', marginTop: 10}} source={require('../../assets/personalgoal.png')} />
+        <View style={{ position: 'absolute', left: calculateLeftPosition(monthlyDrinkGoal === '해당없음' ? 0 : parseFloat(monthlyDrinkGoal)) }}>
+          <Text style={{top:50,color:'#707070',fontSize:11}}>{monthlyDrinkGoal === '해당없음' ? '0병' : `${monthlyDrinkGoal}병`}</Text>
+          <Image style={{top:-100, resizeMode: 'contain', width: 10 }} source={require('../../assets/indicator.png')} />
+        </View>
+        <Image style={{ resizeMode: 'contain', height:50,left:-435 ,marginTop:-20 }} source={getMentImage(monthlyDrinkGoal)} />
+      </View>
       <Text style={styles.title2}>알림</Text>
       <View style={styles.content}>
         <View style={styles.listItem}>
@@ -103,26 +127,26 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 30,
-    marginLeft:10
+    marginLeft: 10,
   },
   content: {
     marginHorizontal: 10,
     borderTopColor: '#DADADA',
-    borderTopWidth: 1
+    borderTopWidth: 1,
   },
   title1: {
     fontSize: 20,
     fontWeight: '500',
     marginBottom: 10,
     marginTop: 50,
-    marginLeft: 10
+    marginLeft: 10,
   },
   title2: {
     fontSize: 20,
     fontWeight: '500',
     marginBottom: 10,
     marginTop: 0,
-    marginLeft: 10
+    marginLeft: 10,
   },
   listItem: {
     backgroundColor: '#fff',

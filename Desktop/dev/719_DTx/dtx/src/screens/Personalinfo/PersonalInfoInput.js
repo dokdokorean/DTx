@@ -26,7 +26,7 @@ const PersonalInfoInput = () => {
   const [birthYear, setBirthYear] = useState('1993');
   const [weight, setWeight] = useState('62');
   const [height, setHeight] = useState('175');
-  const [drinkingGoal, setDrinkingGoal] = useState('0'); // 초기값을 '0'으로 설정
+  const [monthlyDrinkGoal, setDrinkingGoal] = useState('0'); // 초기값을 '0'으로 설정
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0); // New state for recording duration
@@ -76,7 +76,7 @@ const PersonalInfoInput = () => {
           birthYear,
           weight,
           height,
-          drinkingGoal, // Ensure drinkingGoal is included
+          monthlyDrinkGoal, // Ensure drinkingGoal is included
         },
         {
           headers: {
@@ -238,12 +238,12 @@ const PersonalInfoInput = () => {
 
   const renderDrinkingGoalSelection = () => (
     <Picker
-      selectedValue={drinkingGoal}
+      selectedValue={monthlyDrinkGoal}
       style={styles.picker}
       onValueChange={(itemValue) => setDrinkingGoal(itemValue)}
     >
-      {Array.from({ length: 16 }, (_, i) => 0 + i).map(drinkingGoal => (
-        <Picker.Item key={drinkingGoal} label={`${drinkingGoal} 병`} value={String(drinkingGoal)} />
+      {Array.from({ length: 16 }, (_, i) => 0 + i).map(monthlyDrinkGoal => (
+        <Picker.Item key={monthlyDrinkGoal} label={`${monthlyDrinkGoal} 병`} value={String(monthlyDrinkGoal)} />
       ))}
     </Picker>
   );

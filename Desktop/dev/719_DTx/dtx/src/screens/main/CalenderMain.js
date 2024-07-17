@@ -6,6 +6,8 @@ import { Entypo } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../../service/api';
 import { AuthContext } from '../../service/AuthContext';
+import axios from 'axios';
+
 
 const CalendarMain = () => {
   const { jwtToken } = useContext(AuthContext);
@@ -112,35 +114,48 @@ const CalendarMain = () => {
     }
   };
 
-  const fetchRecords = async (date) => {
+const fetchRecords = async (date) => {
+    const fetchRecordsPath = '/drink-records/by-date';
     try {
-      const response = await fetch(`${BASE_URL}/drink-records/by-date?date=${date}`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${jwtToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setRecords({
-          soju: data.soju || 0,
-          beer: data.beer || 0,
-          makgeolli: data.makgeolli || 0,
-          wine: data.wine || 0,
-          liquor: data.whiskey || 0, // Assuming 'whiskey' in the API corresponds to 'liquor' in your state
-          cocktail: data.cocktail || 0,
+        const response = await axios.get(`${BASE_URL}${fetchRecordsPath}`, {
+            params: { date: date },
+            headers: {
+                Authorization: `Bearer ${jwtToken}`,
+                'Content-Type': 'application/json',
+            },
         });
-        console.log(data);
-        console.log(date)
-      } else {
-        console.error('Failed to fetch records');
-      }
+        if (response.status === 200) {
+            const data = response.data;
+            if (Array.isArray(data) && data.length > 0) {
+                const record = data[0]; // 첫 번째 요소를 가져옴
+                setRecords({
+                    soju: record.soju || 0,
+                    beer: record.beer || 0,
+                    makgeolli: record.makgeolli || 0,
+                    wine: record.wine || 0,
+                    liquor: record.whiskey || 0, // Assuming 'whiskey' in the API corresponds to 'liquor' in your state
+                    cocktail: record.cocktail || 0,
+                });
+                console.log(record);
+                console.log(date);
+            } else {
+                setRecords({
+                    soju: 0,
+                    beer:  0,
+                    makgeolli:  0,
+                    wine: 0,
+                    liquor:  0, 
+                    cocktail: 0,
+                });}
+        } else {
+            console.error('Failed to fetch records');
+        }
     } catch (error) {
-      console.error('Error fetching records:', error);
+        console.error('Error fetching records:', error);
     }
-  };
+};
+
+
 
   return (
     <View style={styles.container}>
